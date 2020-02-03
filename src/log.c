@@ -60,7 +60,7 @@ static void unlock(void) {
 void init_logging() {
     L.udata = NULL;
     L.lock  = NULL;
-    L.fb    = NULL;
+    L.fp    = NULL;
     L.level = LOG_INFO;
     L.quiet = 0;
 }
