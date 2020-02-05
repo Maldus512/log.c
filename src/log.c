@@ -28,13 +28,17 @@
 
 #include "log.h"
 
+#ifndef LOG_LEVEL
+#define LOG_LEVEL LOG_INFO
+#endif
+
 static struct {
     void *     udata;
     log_LockFn lock;
     FILE *     fp;
     int        level;
     int        quiet;
-} L;
+} L = {.fp = NULL, .level = LOG_LEVEL, .udata = NULL, .lock = NULL};
 
 
 static const char *level_names[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
@@ -57,18 +61,9 @@ static void unlock(void) {
     }
 }
 
-void init_logging() {
-    L.udata = NULL;
-    L.lock  = NULL;
-    L.fp    = NULL;
-    L.level = LOG_INFO;
-    L.quiet = 0;
-}
-
 void log_set_udata(void *udata) {
     L.udata = udata;
 }
-
 
 void log_set_lock(log_LockFn fn) {
     L.lock = fn;
