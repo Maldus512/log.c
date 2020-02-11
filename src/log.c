@@ -32,13 +32,20 @@
 #define LOG_LEVEL LOG_INFO
 #endif
 
+#define DATEFORMAT_SIZE 32
+
 static struct {
     void *     udata;
     log_LockFn lock;
     FILE *     fp;
+    char       dateformat[32];
     int        level;
-    int        quiet;
-} L = {.fp = NULL, .level = LOG_LEVEL, .udata = NULL, .lock = NULL};
+
+    struct {
+        unsigned int quiet : 1;
+        unsigned int fileinfo : 1;
+    } config;
+} L = {.fp = NULL, .level = LOG_LEVEL, .dateformat = "%Y-%m-%d %H:%M:%S", .udata = NULL, .lock = NULL};
 
 
 static const char *level_names[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
@@ -61,6 +68,13 @@ static void unlock(void) {
     }
 }
 
+static void _log(FILE *dest, char *date, int level, const char *file, int line) {
+    if (L.config.fileinfo)
+        fprintf(dest, "%s %-5s %s:%d: ", date, level_names[level], file, line);
+    else
+        fprintf(dest, "%s %-5s: ", date, level_names[level]);
+}
+
 void log_set_udata(void *udata) {
     L.udata = udata;
 }
@@ -81,9 +95,21 @@ void log_set_level(int level) {
 
 
 void log_set_quiet(int enable) {
-    L.quiet = enable ? 1 : 0;
+    L.config.quiet = enable ? 1 : 0;
 }
 
+void log_set_fileinfo(int enable) {
+    L.config.fileinfo = enable ? 1 : 0;
+}
+
+int log_set_dateformat(char *fmt) {
+    if (strlen(fmt) >= DATEFORMAT_SIZE)
+        return -1;
+    else
+        strcpy(L.dateformat, fmt);
+
+    return 0;
+}
 
 void log_log(int level, const char *file, int line, const char *fmt, ...) {
     if (level < L.level) {
@@ -98,15 +124,15 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
     struct tm *lt = localtime(&t);
 
     /* Log to stderr */
-    if (!L.quiet) {
+    if (!L.config.quiet) {
         va_list args;
         char    buf[16];
-        buf[strftime(buf, sizeof(buf), "%H:%M:%S", lt)] = '\0';
+        buf[strftime(buf, sizeof(buf), L.dateformat, lt)] = '\0';
 #ifdef LOG_USE_COLOR
-        fprintf(stderr, "%s %s%-5s\x1b[0m \x1b[90m%s:%d:\x1b[0m ", buf, level_colors[level], level_names[level], file,
-                line);
+        fprintf(stderr, "%s\t%s%-5s\t\x1b[0m \x1b[90m%s:%d:\x1b[0m\t", buf, level_colors[level], level_names[level],
+                file, line);
 #else
-        fprintf(stderr, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
+        fprintf(stderr, "%s\t%-5s\t%s:%d:\t", buf, level_names[level], file, line);
 #endif
         va_start(args, fmt);
         vfprintf(stderr, fmt, args);
@@ -119,8 +145,8 @@ void log_log(int level, const char *file, int line, const char *fmt, ...) {
     if (L.fp) {
         va_list args;
         char    buf[32];
-        buf[strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", lt)] = '\0';
-        fprintf(L.fp, "%s %-5s %s:%d: ", buf, level_names[level], file, line);
+        buf[strftime(buf, sizeof(buf), L.dateformat, lt)] = '\0';
+        _log(L.fp, buf, level, file, line);
         va_start(args, fmt);
         vfprintf(L.fp, fmt, args);
         va_end(args);
