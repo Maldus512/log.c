@@ -45,7 +45,7 @@ static struct {
         unsigned int quiet : 1;
         unsigned int fileinfo : 1;
     } config;
-} L = {.fp = NULL, .level = LOG_LEVEL, .dateformat = "%Y-%m-%d %H:%M:%S", .udata = NULL, .lock = NULL};
+} L = {.fp = NULL, .level = LOG_LEVEL, .dateformat = "%d-%m-%Y %H:%M:%S", .udata = NULL, .lock = NULL};
 
 
 static const char *level_names[] = {"TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
